@@ -3,6 +3,8 @@
 #ifndef CONSOLE_IO_H
 #define CONSOLE_IO_H
 
+//#define NONBLOCKING_MODE
+
 #include <stdint.h>
 #include "stm32f7xx_hal.h"
 
@@ -10,6 +12,10 @@ typedef enum {CONSOLE_SUCCESS = 0u, CONSOLE_ERROR = 1u } eConsoleError;
 
 extern UART_HandleTypeDef huart4; // Make this available so debug messages can be sent once the console starts
 
+#ifdef NONBLOCKING_MODE
+void HAL_UART_MspInit(UART_HandleTypeDef *huart);
+void PutCharOnRx();
+#endif
 eConsoleError ConsoleIoInit(void);
 
 eConsoleError ConsoleIoReceive(uint8_t *buffer, const uint32_t bufferLength, uint32_t *readLength);

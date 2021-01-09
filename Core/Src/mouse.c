@@ -12,8 +12,7 @@ USB_MOUSE_MSG_t mouseState;
 
 void SetMouseState(uint8_t buttons, HID_MOUSE_POS_t pos_x, HID_MOUSE_POS_t pos_y, HID_WHEEL_t wheel)
 {
-	buttons << 3; buttons >> 3; // Clear the 3 MSB (reserved bits), leaving the five button state flags
-	mouseState.buttons = buttons;
+	mouseState.buttons = buttons & 0b00011111; // 5 button flags are 5 LSb
 	mouseState.pos_x = pos_x;
 	mouseState.pos_y = pos_y;
 	mouseState.wheel = wheel;

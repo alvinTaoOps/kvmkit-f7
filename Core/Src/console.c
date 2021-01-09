@@ -17,7 +17,6 @@
 #define NULL_CHAR            '\0'
 #define CR_CHAR              '\r'
 #define LF_CHAR              '\n'
-//#define NONBLOCKING_MODE
 
 // global variables
 char mReceiveBuffer[CONSOLE_COMMAND_MAX_LENGTH];
@@ -143,6 +142,7 @@ void ConsoleProcess(void)
 #endif
 	if ( received > 0u )
 	{
+		ConsoleIoSend((uint8_t*) &mReceiveBuffer[mReceivedSoFar], received, &cmdIndex);
 		mReceivedSoFar += received;
 		cmdEndline = ConsoleCommandEndline(mReceiveBuffer, mReceivedSoFar);
 		if ( cmdEndline >= 0 )  // have complete string, find command
