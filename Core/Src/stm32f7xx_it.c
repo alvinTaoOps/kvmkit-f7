@@ -204,12 +204,10 @@ void SysTick_Handler(void)
 /**
   * @brief This function handles UART4 global interrupt.
   */
-void UART4_IRQHandler(void)
+__weak void UART4_IRQHandler(void)
 {
   /* USER CODE BEGIN UART4_IRQn 0 */
-#ifdef NONBLOCKING_MODE
-  PutCharOnRx();
-#endif
+	// CUBE NOTE: this function must be made weak or removed so we can redefine in consoleIo
   /* USER CODE END UART4_IRQn 0 */
   HAL_UART_IRQHandler(&huart4);
   /* USER CODE BEGIN UART4_IRQn 1 */

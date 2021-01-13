@@ -6,42 +6,15 @@
 #include <stdio.h>
 #include <string.h>
 
-#define UART_BUFFER_SIZE 256
+#define UART_BUFFER_SIZE 256 // Must be power of 2 if enabling interrupts
 
 extern UART_HandleTypeDef huart4;
 
-volatile uint8_t rx_buf[UART_BUFFER_SIZE];
-volatile uint8_t rx_buf_ins = 0;
-volatile uint8_t overflow_count = 0;
-
-uint32_t discard;
 
 int _write(int file, char *outgoing, int len) {
    HAL_UART_Transmit(&huart4, (unsigned char *) outgoing, (uint16_t) len, (uint32_t) 100); //TODO: verify timeout duration
    return len;
 }
-
-#ifdef NONBLOCKING_MODE
-#define MIN(X, Y)		(((X) < (Y)) ? (X) : (Y))
-#define MAX(X, Y)		(((X) > (Y)) ? (X) : (Y))
-// Override HAL
-void __HAL_UART_MspInit(UART_HandleTypeDef *huart)
-{
-	__HAL_UART_ENABLE_IT(&huart4, UART_IT_RXNE);
-}
-
-uint32_t readLength;
-uint32_t availableBytes;
-
-void PutCharOnRx()
-{
-	readLength = 0;
-	availableBytes = MIN(huart4.RxXferCount, UART_BUFFER_SIZE - rx_buf_ins);
-	overflow_count += MAX(0, rx_buf_ins + huart4.RxXferCount - UART_BUFFER_SIZE);
-	HAL_UART_Receive( &huart4, (uint8_t*) &rx_buf[rx_buf_ins], availableBytes, 50); // 50ms is not tested
-	rx_buf_ins += availableBytes - huart4.RxXferCount;
-}
-#endif
 
 eConsoleError ConsoleIoInit(void)
 {
@@ -64,36 +37,9 @@ eConsoleError ConsoleIoInit(void)
 	setvbuf(stdin, NULL, _IONBF, 0);
 	setvbuf(stdout, NULL, _IONBF, 0);
 
-	return CONSOLE_SUCCESS;
-}
-
-eConsoleError ConsoleIoReceive(uint8_t *buffer, const uint32_t bufferLength, uint32_t *readLength)
-{
-	HAL_UART_Receive( &huart4, buffer, bufferLength, 50); // 50ms is not tested
-	*readLength = bufferLength - huart4.RxXferCount;
-	return CONSOLE_SUCCESS;
-}
-
-eConsoleError ConsoleIoReceiveInt(uint8_t *buffer, const uint32_t bufferLength, uint32_t *readLength)
-{
-	uint8_t i = 0;
-	while (( '\n' != rx_buf[i] ) && ( i < rx_buf_ins )) {
-		i++;
-	}
-
-	// Can't validate vs rx_buf_ins because it could have incremented
-	if ( '\n' != rx_buf[i] ){
-		*readLength = 0;
-	} else if (i > bufferLength){
-		*readLength = i; // signal we got too much before error
-		return CONSOLE_ERROR;
-	} else {
-		*readLength = i;
-		memcpy(buffer, (uint8_t*) rx_buf, i); // copy out data
-		memcpy((uint8_t*) rx_buf, (uint8_t*) &rx_buf[i], UART_BUFFER_SIZE-i); // shift remaining data down
-		// if the interrupt runs here then we get one interrupt data len worth of substitution error
-		rx_buf_ins -= i; // insert pointer continues where it left off
-	}
+#ifdef NONBLOCKING_MODE
+	UART_Int_Init();
+#endif
 
 	return CONSOLE_SUCCESS;
 }
@@ -111,4 +57,72 @@ eConsoleError ConsoleIoSendString(const char *buffer)
 	return CONSOLE_SUCCESS;
 }
 
+#ifdef NONBLOCKING_MODE
 
+#define USART_Console UART4
+#define USART_Console_IRQn UART4_IRQn
+#define USART_Console_IRQHandler UART4_IRQHandler
+
+#ifdef USART_CR1_TXEIE_TXFNFIE // FIFO Support (L4R9)
+#define USART_CR1_TXEIE USART_CR1_TXEIE_TXFNFIE
+#define USART_ISR_TXE USART_ISR_TXE_TXFNF
+#define USART_CR1_RXNEIE USART_CR1_RXNEIE_RXFNEIE
+#define USART_ISR_RXNE USART_ISR_RXNE_RXFNE
+#endif
+
+static volatile uint8_t rx_buf[UART_BUFFER_SIZE];
+volatile uint8_t rx_buf_ins = 0;
+
+void UART_Int_Init()
+{
+	HAL_NVIC_SetPriority(USART_Console_IRQn, 1, 0);
+	HAL_NVIC_EnableIRQ(USART_Console_IRQn);
+	USART_Console->CR1 |= USART_CR1_RXNEIE; // Enable Interrupt
+}
+
+void UART_Int_Deinit()
+{
+	HAL_NVIC_DisableIRQ(USART_Console_IRQn);
+}
+
+void USART_Console_IRQHandler(void)
+{
+	if (USART_Console->ISR & USART_ISR_ORE) // Overrun Error
+		USART_Console->ICR = USART_ICR_ORECF;
+	if (USART_Console->ISR & USART_ISR_NE) // Noise Error
+		USART_Console->ICR = USART_ICR_NCF;
+	if (USART_Console->ISR & USART_ISR_FE) // Framing Error
+		USART_Console->ICR = USART_ICR_FECF;
+	if (USART_Console->ISR & USART_ISR_RXNE) // Received character
+	{
+		char rx = (char)(USART_Console->RDR & 0xFF);
+		rx_buf[rx_buf_ins++] = rx; // Copy to buffer and increment
+		rx_buf_ins &= (UART_BUFFER_SIZE-1);
+	}
+}
+
+eConsoleError ConsoleIoReceive(uint8_t *buffer, const uint32_t bufferLength, uint32_t *readLength)
+{
+	if (rx_buf_ins > 0)
+	{
+		uint8_t n_available = MIN(rx_buf_ins, bufferLength);
+		*readLength = n_available;
+		memcpy(buffer, (uint8_t*) rx_buf, n_available); // copy out data
+		memcpy((uint8_t*) rx_buf, (uint8_t*) &rx_buf[n_available], UART_BUFFER_SIZE - n_available); // shift remaining data down
+		// if the interrupt runs here then we lose that data
+		rx_buf_ins -= n_available; // insert pointer continues where it left off
+	} else
+	{
+		*readLength = 0;
+	}
+
+	return CONSOLE_SUCCESS;
+}
+#else
+eConsoleError ConsoleIoReceive(uint8_t *buffer, const uint32_t bufferLength, uint32_t *readLength)
+{
+	HAL_UART_Receive( &huart4, buffer, bufferLength, 50); // 50ms is not tested
+	*readLength = bufferLength - huart4.RxXferCount;
+	return CONSOLE_SUCCESS;
+}
+#endif
