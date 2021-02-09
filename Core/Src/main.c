@@ -102,7 +102,7 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  uint16_t iter_cnt = 0;
+  uint32_t iter_cnt = 0;
   while (1)
   {
     /* USER CODE END WHILE */
@@ -112,7 +112,8 @@ int main(void)
 	  ProcessUsbDemo();
 	  //FlushKeyQueue();
 
-	  if (++iter_cnt > 1000) {
+	  if (++iter_cnt > 500000) {
+		  (void) FlushKeyQueue();
 		  HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
 		  iter_cnt = 0;
 	  }
@@ -140,8 +141,8 @@ void ProcessUsbDemo()
 {
 	if ( flags & FLAG_MASK_USB_DEMO )
 	{
-		//USB_Keyboard_SendString((char *) demo_text);
-		FlushKeyQueue();
+		USB_Keyboard_SendString((char *) demo_text);
+		//FlushKeyQueue();
 		flags &= ~FLAG_MASK_USB_DEMO;
 	}
 }

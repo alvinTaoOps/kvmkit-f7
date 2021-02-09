@@ -25,17 +25,19 @@ static eCommandResult_T ConsoleCommandParamExampleHexUint16(const char buffer[])
 static eCommandResult_T ConsoleCommandSetMouse(const char buffer[]);
 static eCommandResult_T ConsoleCommandPutOneKey(const char buffer[]);
 static eCommandResult_T ConsoleCommandPutLineKey(const char buffer[]);
+static eCommandResult_T ConsoleCommandFlushKeys(const char buffer[]);
 
 static const sConsoleCommandTable_T mConsoleCommandTable[] =
 {
     {";", &ConsoleCommandComment, HELP("Comment! You do need a space after the semicolon. ")},
     {"help", &ConsoleCommandHelp, HELP("Lists the commands available")},
     {"ver", &ConsoleCommandVer, HELP("Get the version string")},
-    {"int", &ConsoleCommandParamExampleInt16, HELP("How to get a signed int16 from params list: int -321")},
-    {"u16h", &ConsoleCommandParamExampleHexUint16, HELP("How to get a hex u16 from the params list: u16h aB12")},
-    {"csm", &ConsoleCommandSetMouse, HELP("Set the mouse state: csm <5b buttons> <x pos> <y pos> <wheel>")},
-    {"cpk", &ConsoleCommandPutOneKey, HELP("Send one keypress: cpk <8b mods> <key1> <k2> <k3> <k4> <k5> <k6>")},
+    //{"int", &ConsoleCommandParamExampleInt16, HELP("How to get a signed int16 from params list: int -321")},
+    //{"u16h", &ConsoleCommandParamExampleHexUint16, HELP("How to get a hex u16 from the params list: u16h aB12")},
+    {"csm", &ConsoleCommandSetMouse, HELP("Set the mouse state: csm <buttons> <x pos> <y pos> <wheel>")},
+    {"cpk", &ConsoleCommandPutOneKey, HELP("Send one keypress: cpk <mods> <key1> <k2> <k3> <k4> <k5> <k6>")},
     {"cpl", &ConsoleCommandPutLineKey, HELP("Send a series of keypresses")},
+	{"flsh", &ConsoleCommandFlushKeys, HELP("Flush key buffer")},
 
 	CONSOLE_COMMAND_TABLE_END // must be LAST
 };
@@ -114,23 +116,18 @@ static eCommandResult_T ConsoleCommandSetMouse(const char buffer[])
 {
 	eCommandResult_T result = COMMAND_SUCCESS;
 
-	char buttonArray[CONSOLE_COMMAND_MAX_LENGTH];
-	uint8_t buttonState;
-	uint32_t argLen = 5;
+	int16_t buttonState;
 	int16_t mouseX;
 	int16_t mouseY;
 	int16_t mouseWheel;
 
-	result |= ConsoleReceiveParamString(buffer, 1, &argLen, buttonArray);
-	buttonArray[argLen] = 'a'; // argLen gets changed to be the length of the returned paramater
-							   // strtol reads until it sees a non-integer character so this is our stop flag
+	result |= ConsoleReceiveParamInt16(buffer, 1, &buttonState);
 	result |= ConsoleReceiveParamInt16(buffer, 2, &mouseX);
 	result |= ConsoleReceiveParamInt16(buffer, 3, &mouseY);
 	result |= ConsoleReceiveParamInt16(buffer, 4, &mouseWheel);
 	if ( COMMAND_SUCCESS == result )
 	{
-		buttonState = (uint8_t) strtol(buttonArray, NULL, 2);	// turn binary buttons string (10110) into uint8
-		SetMouseState(buttonState, mouseX, mouseY, mouseWheel);
+		SetMouseState((uint8_t) buttonState, mouseX, mouseY, mouseWheel);
 		ConsoleIoSendString(STR_ENDLINE);
 	}
 	return result;
@@ -146,16 +143,6 @@ static eCommandResult_T ConsoleCommandPutOneKey(const char buffer[])
 	memset(param, 0, 7);
 	eCommandResult_T result;
 	uint8_t param_count = 0;
-/*
-	// get our modifier byte as a binary string and convert to int
-	char modifierArray[CONSOLE_COMMAND_MAX_LENGTH];
-	uint32_t argLen = 8;
-	result = ConsoleReceiveParamString(buffer, 1, &argLen, modifierArray);
-	if ( COMMAND_SUCCESS == result )
-	{
-		param[0] = (uint8_t) strtol(modifierArray, NULL, 2);	// turn binary modifier string (b00000010) into uint8
-	}
-*/
 
 	// get our key values as decimal
 	while ( result == COMMAND_SUCCESS && param_count < 7 )
@@ -164,13 +151,7 @@ static eCommandResult_T ConsoleCommandPutOneKey(const char buffer[])
 		param_count++;
 	}
 
-	ConsoleIoSendString("Check one ");
-	ConsoleSendParamInt16((uint16_t) result);
-	ConsoleIoSendString(" ");
-	ConsoleSendParamInt16((uint16_t) param_count);
-	ConsoleIoSendString(STR_ENDLINE);
-
-	if ( COMMAND_SUCCESS == result ) // Got all 6 keys
+	if ( COMMAND_SUCCESS == result ) // Got modifiers and all 6 keys
 	{
 		InsertHidKey(param[0], &param[1], param_count - 1);
 	}
@@ -182,7 +163,7 @@ static eCommandResult_T ConsoleCommandPutOneKey(const char buffer[])
 	}
 	else // COMMAND_PARAMETER_ERROR, COMMAND_ERROR, or COMMAND_PARAMETER_END before <key1>
 	{
-		ConsoleIoSendString("Parameter Error: Make sure cpk arguments are binary (mods) or unsigned integers (keys)");
+		ConsoleIoSendString("Parameter Error: Make sure cpk arguments are unsigned integers");
 	}
 
 	return result;
@@ -192,15 +173,21 @@ static eCommandResult_T ConsoleCommandPutLineKey(const char buffer[])
 {
 	char cmdArg[CONSOLE_COMMAND_MAX_LENGTH];
 	eCommandResult_T result;
-	uint32_t argLen = 0;
+	uint32_t argLen = CONSOLE_COMMAND_MAX_LENGTH;
 
 	result = ConsoleReceiveParamAllArgs(buffer, &argLen, cmdArg);
 	if ( COMMAND_SUCCESS == result )
 	{
-		InsertCharacter(cmdArg, argLen);
-		ConsoleIoSendString(STR_ENDLINE);
+		InsertCharacters(cmdArg, argLen);
 	}
 	return result;
+}
+
+static eCommandResult_T ConsoleCommandFlushKeys(const char buffer[])
+{
+	FlushKeyQueue();
+
+	return COMMAND_SUCCESS;
 }
 
 

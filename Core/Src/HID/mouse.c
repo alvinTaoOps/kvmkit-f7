@@ -20,11 +20,7 @@ void SetMouseState(uint8_t buttons, HID_MOUSE_POS_t pos_x, HID_MOUSE_POS_t pos_y
 
 
 /*
- * TODO pos_x, y, and buttons should be sticky (not cleared once sent) but I'm not sure about mouse wheel
- * TODO If this result doesn't slot right into the USB report, change the struct typedef so it makes the
- * 		right series of bytes. If that fails then change this into a little byte array serializer?
- * TODO Does this need to return a copy not a ref? If the uart interrupt updates after GET, that might
- * 		overrun a prior input, but the new command should have a better x/y anyway?
+ * TODO absolute x, y, and buttons should be sticky (not cleared once sent), not sure about clearing mouse wheel, relative x,y
  */
 USB_MOUSE_MSG_t GetMouseState()
 {

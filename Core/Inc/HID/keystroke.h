@@ -29,7 +29,7 @@ typedef struct USB_KEY_MSG_Struct {
 }USB_KEY_MSG_t;
 static_assert(sizeof(USB_KEY_MSG_t) <= 8, "Too large for HID profile");
 
-void InsertCharacter(char * input, uint8_t n_char);
+void InsertCharacters(char * input, uint8_t n_char);
 void InsertHidKey(uint8_t modifiers, uint8_t * keys, uint8_t n_keys);
 
 void USB_Keyboard_SendString(char * s);

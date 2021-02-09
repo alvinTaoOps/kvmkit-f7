@@ -213,25 +213,26 @@ static eCommandResult_T ConsoleParamFindN(const char * buffer, const uint8_t par
 
 // ConsoleReveiveParamAllArgs
 // Fill the argument buffer with all provided arguments/parameters including separators, except for the command name
-// and  its separator
+// and its separator
 eCommandResult_T ConsoleReceiveParamAllArgs(const char * buffer, uint32_t * lenArgs, char * args)
 {
-	uint32_t startIndex = 0;
-	uint32_t i = 0;
+	uint32_t startIndex;
+	uint32_t i;
 	uint32_t maxArgLen;
 	eCommandResult_T result;
 
 	result = ConsoleParamFindN(buffer, 1, &startIndex);
 	maxArgLen = CONSOLE_COMMAND_MAX_LENGTH - startIndex;
 
+	i = 0;
 	char charVal = buffer[startIndex + i];
-	while ( ( LF_CHAR != charVal ) && ( CR_CHAR != charVal ) && ( i < maxArgLen ) )
+	while ( ( LF_CHAR != charVal ) && ( CR_CHAR != charVal ) && ( i < maxArgLen ) && (i < *lenArgs))
 	{
-		args[i] = charVal;					// copy the relevant part
+		args[i] = charVal;
 		i++;
 		charVal = buffer[startIndex + i];
 	}
-	if ( i == CONSOLE_COMMAND_MAX_LENGTH)
+	if ( i == maxArgLen || i == *lenArgs )
 	{
 		result = COMMAND_ERROR;
 	}

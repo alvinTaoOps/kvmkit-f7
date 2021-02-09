@@ -45,18 +45,69 @@ void InsertOnBuffer(USB_KEY_MSG_t hid_key)
 	iter_w_wrap(&kb_ins);
 }
 
+
 /*
  * Write a character into the key buffer as an hid message
  */
-void InsertCharacter(char * input, uint8_t n_char)
+void InsertCharacters(char * input, uint8_t n_char)
 {
-	//TODO loop through the input array
-		// look ahead for escapes/keycombos (so library only needs the atomic combinations)
-		// send each atomic press to charToHid
-		// handle any illegal combinations
-		// insert the result onto the buffer
-	InsertOnBuffer(charToHidMessage(input, n_char));
+	int i = 0;
+	char i_char;
+
+	char esc_builder[MAX_ASCII_REP_SIZE + 2]; // adding in space for escape chars
+	int esc_index = -1;
+	int fail_to_find_char = 0;
+
+	USB_KEY_MSG_t key_tmp;
+
+	while ( i < n_char && !fail_to_find_char)
+	{
+		i_char = input[i];
+		i++;
+
+		if ( i_char == ESC_CHAR )
+		{
+			if ( esc_index == -1 )		// found opening escape character
+			{
+				esc_builder[0] = i_char;
+				esc_index = 1;			// enable the esc_builder
+			}
+			else						// found closing escape character
+			{
+				esc_builder[esc_index] = i_char;
+				if (MapToHid(esc_builder, ++esc_index, &key_tmp)){
+					fail_to_find_char = 1;
+				} else {
+					InsertOnBuffer(key_tmp);
+				}
+				esc_index = -1;			// disable the esc_builder
+			}
+		}
+		else
+		{
+			if ( esc_index < 0)			// non-escaped character
+			{
+				if (MapToHid(&i_char, 1, &key_tmp)){
+					fail_to_find_char = 1;
+				} else {
+					InsertOnBuffer(key_tmp);
+				}
+			}
+			else
+			{
+				esc_builder[esc_index] = i_char;  // add to the escape string
+				++esc_index;
+			}
+		}
+
+		if ( esc_index == MAX_ASCII_REP_SIZE )
+		{
+			assert(esc_index < MAX_ASCII_REP_SIZE);
+			fail_to_find_char = 1;
+		}
+	}
 }
+
 
 /**
  * 	Push an HID message onto the key buffer
@@ -79,6 +130,7 @@ void InsertHidKey(uint8_t modifiers, uint8_t keys[], uint8_t n_keys)
 	InsertOnBuffer(hid_key);
 }
 
+
 #if DEFAULT_ON_NO_COMMAND == DEFAULT_HOLD
 uint8_t decr_w_wrap(uint8_t index)
 {
@@ -100,7 +152,7 @@ uint8_t SendKey()
 
 		ret = key_buf[decr_w_wrap(kb_pop)];
 #else
-		ret = NO_EVENT_INDICATED.usage_code_rep;
+		return !empty_buf;
 #endif
 	}
 	else
@@ -115,11 +167,13 @@ uint8_t SendKey()
 	}
 	HAL_Delay(15);
 
+#if DEFAULT_ON_NO_COMMAND == DEFAULT_RELEASE
 	if(USB_Keyboard_SendKeys(NO_KEY_PRESS) != HAL_OK)
 	{
 		Error_Handler_Context(__FILE__, __LINE__);
 	}
 	HAL_Delay(15);
+#endif
 
 	return !empty_buf;
 }
