@@ -59,7 +59,7 @@ const char _asciimap[128] =
 	0x00,           // RS
 	0x00,           // US
 
-	0x2c,		   	//  ' '
+	0x2c,		   	// Space
 	0x1e|SHIFT,	   	// !
 	0x34|SHIFT,	   	// "
 	0x20|SHIFT,    	// #

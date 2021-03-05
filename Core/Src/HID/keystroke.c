@@ -214,7 +214,7 @@ USB_KEY_MSG_t charToHidMessage(char * input, uint8_t n_char)
 		else if(ch >= 'A' && ch <= 'Z')
 		{
 			// Add left shift
-			HID_buffer[0] = USB_HID_MODIFIER_LEFT_SHIFT;
+			HID_buffer[0] = USB_HID_MOD_LEFT_SHIFT;
 			// convert ch to lower case
 			ch = ch - ('A'-'a');
 			// convert ch to HID letter, starting at a = 4
@@ -251,17 +251,17 @@ USB_KEY_MSG_t charToHidMessage(char * input, uint8_t n_char)
 					break;
 				case '!':
 					//combination of shift modifier and key
-					HID_buffer[0] = USB_HID_MODIFIER_LEFT_SHIFT;	// shift
+					HID_buffer[0] = USB_HID_MOD_LEFT_SHIFT;	// shift
 					HID_buffer[2] = 30; // number 1
 					break;
 				case '?':
 					//combination of shift modifier and key
-					HID_buffer[0] = USB_HID_MODIFIER_LEFT_SHIFT;	// shift
+					HID_buffer[0] = USB_HID_MOD_LEFT_SHIFT;	// shift
 					HID_buffer[2] = USB_HID_FSLASH; // key '/'
 					break;
 				case '@':
 					//combination of shift modifier and key
-					HID_buffer[0] = USB_HID_MODIFIER_LEFT_SHIFT;	// shift
+					HID_buffer[0] = USB_HID_MOD_LEFT_SHIFT;	// shift
 					HID_buffer[2] = 31; // number 2
 					break;
 				default:
