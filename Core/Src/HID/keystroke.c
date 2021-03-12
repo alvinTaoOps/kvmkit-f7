@@ -106,6 +106,14 @@ void InsertCharacters(char * input, uint8_t n_char)
 			fail_to_find_char = 1;
 		}
 	}
+
+#ifndef NDEBUG
+	if (fail_to_find_char)
+	{
+		char err_msg[50];
+		printf(err_msg, "Could not translate %c\n", i_char);
+	}
+#endif
 }
 
 
@@ -187,95 +195,6 @@ void FlushKeyQueue()
 	}
 }
 
-/*
- * Use the ascii-hid keycode lookup tables to turn a string of chars and modifiers
- * 		into a keyboard hid message
- */
-USB_KEY_MSG_t charToHidMessage(char * input, uint8_t n_char)
-{
-	// TODO do the ascii lookup into the usb key combo table and return the real message
-	//return (NO_EVENT_INDICATED.usage_code_rep);
-
-	uint8_t HID_buffer[8];
-	memset(HID_buffer, 0, 8);
-	USB_KEY_MSG_t hid_msg;
-	memset(&hid_msg, 0, sizeof(hid_msg));
-
-	//assert(n_char > 0); //TODO implement assertions
-
-	char ch = input[0];
-
-	if(ch >= 'a' && ch <= 'z')
-		{
-			HID_buffer[0] = 0;
-			// convert ch to HID letter, starting at a = 4
-			HID_buffer[2] = (uint8_t)(4 + (ch - 'a'));
-		}
-		else if(ch >= 'A' && ch <= 'Z')
-		{
-			// Add left shift
-			HID_buffer[0] = USB_HID_MOD_LEFT_SHIFT;
-			// convert ch to lower case
-			ch = ch - ('A'-'a');
-			// convert ch to HID letter, starting at a = 4
-			HID_buffer[2] = (uint8_t)(4 + (ch - 'a'));
-		}
-		else if(ch >= '0' && ch <= '9') // Check if number
-		{
-			HID_buffer[0] = 0;
-			// convert ch to HID number, starting at 1 = 30, 0 = 39
-			if(ch == '0')
-			{
-				HID_buffer[2] = 39;
-			}
-			else
-			{
-				HID_buffer[2] = (uint8_t)(30 + (ch - '1'));
-			}
-		}
-		else // not a letter nor a number
-		{
-			switch(ch)
-			{
-				case ' ':
-					HID_buffer[0] = 0;
-					HID_buffer[2] = 44;
-					break;
-				case '.':
-					HID_buffer[0] = 0;
-					HID_buffer[2] = 55;
-					break;
-				case '\n':
-					HID_buffer[0] = 0;
-					HID_buffer[2] = 40;
-					break;
-				case '!':
-					//combination of shift modifier and key
-					HID_buffer[0] = USB_HID_MOD_LEFT_SHIFT;	// shift
-					HID_buffer[2] = 30; // number 1
-					break;
-				case '?':
-					//combination of shift modifier and key
-					HID_buffer[0] = USB_HID_MOD_LEFT_SHIFT;	// shift
-					HID_buffer[2] = USB_HID_FSLASH; // key '/'
-					break;
-				case '@':
-					//combination of shift modifier and key
-					HID_buffer[0] = USB_HID_MOD_LEFT_SHIFT;	// shift
-					HID_buffer[2] = 31; // number 2
-					break;
-				default:
-					HID_buffer[0] = 0;
-					HID_buffer[2] = 0; // not implemented
-			}
-		}
-
-	hid_msg.modifiers = HID_buffer[0];
-	hid_msg.key1 = HID_buffer[2];
-
-	return hid_msg;
-}
-
 /**
  * 	Immediately send a combination of keys and modifiers
  * 	TODO: register a timer to call this function and send the next keypress in the queue (if any) every 15ms, else use hold behavior
@@ -301,7 +220,7 @@ void USB_Keyboard_SendString(char * s)
 	uint8_t i = 0;
 	while (*(s+i)) //until ascii null char
 	{
-		keypress = charToHidMessage(s+i, 1);
+		MapToHid(s+i, 1, &keypress);
 		if(USB_Keyboard_SendKeys(keypress) != HAL_OK)
 		{
 			Error_Handler_Context(__FILE__, __LINE__);
