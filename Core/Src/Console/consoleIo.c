@@ -8,7 +8,7 @@
 
 #define UART_BUFFER_SIZE 256 // Must be power of 2 if enabling interrupts
 
-extern UART_HandleTypeDef huart4;
+UART_HandleTypeDef huart4;
 
 
 int _write(int file, char *outgoing, int len) {

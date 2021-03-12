@@ -44,7 +44,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 
-UART_HandleTypeDef huart4;
 
 /* USER CODE BEGIN PV */
 volatile uint8_t flags = 0;
@@ -56,7 +55,6 @@ volatile uint8_t flags = 0;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_UART4_Init(void);
 /* USER CODE BEGIN PFP */
 void ProcessUsbDemo(void);
 /* USER CODE END PFP */
@@ -94,7 +92,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_UART4_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
   ConsoleInit();
@@ -110,41 +107,14 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	  ConsoleProcess();
 	  ProcessUsbDemo();
-	  //FlushKeyQueue();
 
-	  if (++iter_cnt > 500000) {
+	  if (++iter_cnt > 500000) {  //Move to timer
 		  (void) FlushKeyQueue();
 		  HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
 		  iter_cnt = 0;
 	  }
   }
   /* USER CODE END 3 */
-}
-
-/**
- * GPIO Int callback
- * GPIO_PIN_13 is the user button on f7 nucleo64
- */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-	if (GPIO_Pin == GPIO_PIN_13)
-	{
-		flags |= FLAG_MASK_USB_DEMO;
-	}
-}
-
-const char demo_text[22] = "USB HID demo text 100\n";
-/**
- * 	Run usb demo if flag set
- */
-void ProcessUsbDemo()
-{
-	if ( flags & FLAG_MASK_USB_DEMO )
-	{
-		USB_Keyboard_SendString((char *) demo_text);
-		//FlushKeyQueue();
-		flags &= ~FLAG_MASK_USB_DEMO;
-	}
 }
 
 /**
@@ -205,41 +175,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-}
-
-/**
-  * @brief UART4 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_UART4_Init(void)
-{
-
-  /* USER CODE BEGIN UART4_Init 0 */
-
-  /* USER CODE END UART4_Init 0 */
-
-  /* USER CODE BEGIN UART4_Init 1 */
-
-  /* USER CODE END UART4_Init 1 */
-  huart4.Instance = UART4;
-  huart4.Init.BaudRate = 115200;
-  huart4.Init.WordLength = UART_WORDLENGTH_8B;
-  huart4.Init.StopBits = UART_STOPBITS_1;
-  huart4.Init.Parity = UART_PARITY_NONE;
-  huart4.Init.Mode = UART_MODE_TX_RX;
-  huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart4.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart4) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN UART4_Init 2 */
-
-  /* USER CODE END UART4_Init 2 */
-
 }
 
 /**
@@ -338,6 +273,32 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+/**
+ * GPIO Int callback
+ * GPIO_PIN_13 is the user button on f7 nucleo64
+ */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if (GPIO_Pin == GPIO_PIN_13)
+	{
+		flags |= FLAG_MASK_USB_DEMO;
+	}
+}
+
+const char demo_text[22] = "USB HID demo text 100\n";
+/**
+ * 	Run usb demo if flag set
+ */
+void ProcessUsbDemo()
+{
+	if ( flags & FLAG_MASK_USB_DEMO )
+	{
+		USB_Keyboard_SendString((char *) demo_text);
+		flags &= ~FLAG_MASK_USB_DEMO;
+	}
+}
+
 /**
   * @brief  This function is executed in case of error occurrence and includes file and line context
   */
