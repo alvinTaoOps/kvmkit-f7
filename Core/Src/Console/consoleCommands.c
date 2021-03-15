@@ -20,8 +20,6 @@
 static eCommandResult_T ConsoleCommandComment(const char buffer[]);
 static eCommandResult_T ConsoleCommandVer(const char buffer[]);
 static eCommandResult_T ConsoleCommandHelp(const char buffer[]);
-static eCommandResult_T ConsoleCommandParamExampleInt16(const char buffer[]);
-static eCommandResult_T ConsoleCommandParamExampleHexUint16(const char buffer[]);
 static eCommandResult_T ConsoleCommandSetMouse(const char buffer[]);
 static eCommandResult_T ConsoleCommandPutOneKey(const char buffer[]);
 static eCommandResult_T ConsoleCommandPutLineKey(const char buffer[]);
@@ -32,8 +30,6 @@ static const sConsoleCommandTable_T mConsoleCommandTable[] =
     {";", &ConsoleCommandComment, HELP("Comment! You do need a space after the semicolon. ")},
     {"help", &ConsoleCommandHelp, HELP("Lists the commands available")},
     {"ver", &ConsoleCommandVer, HELP("Get the version string")},
-    //{"int", &ConsoleCommandParamExampleInt16, HELP("How to get a signed int16 from params list: int -321")},
-    //{"u16h", &ConsoleCommandParamExampleHexUint16, HELP("How to get a hex u16 from the params list: u16h aB12")},
     {"csm", &ConsoleCommandSetMouse, HELP("Set the mouse state: csm <buttons> <x pos> <y pos> <wheel>")},
     {"cpk", &ConsoleCommandPutOneKey, HELP("Send one keypress: cpk <mods> <key1> <k2> <k3> <k4> <k5> <k6>")},
     {"cpl", &ConsoleCommandPutLineKey, HELP("Send a series of keypresses")},
@@ -65,37 +61,6 @@ static eCommandResult_T ConsoleCommandHelp(const char buffer[])
 		ConsoleIoSendString(" : ");
 		ConsoleIoSendString(mConsoleCommandTable[i].help);
 #endif // CONSOLE_COMMAND_MAX_HELP_LENGTH > 0
-		ConsoleIoSendString(STR_ENDLINE);
-	}
-	return result;
-}
-
-static eCommandResult_T ConsoleCommandParamExampleInt16(const char buffer[])
-{
-	int16_t parameterInt;
-	eCommandResult_T result;
-	result = ConsoleReceiveParamInt16(buffer, 1, &parameterInt);
-	if ( COMMAND_SUCCESS == result )
-	{
-		ConsoleIoSendString("Parameter is ");
-		ConsoleSendParamInt16(parameterInt);
-		ConsoleIoSendString(" (0x");
-		ConsoleSendParamHexUint16((uint16_t)parameterInt);
-		ConsoleIoSendString(")");
-		ConsoleIoSendString(STR_ENDLINE);
-	}
-	return result;
-}
-
-static eCommandResult_T ConsoleCommandParamExampleHexUint16(const char buffer[])
-{
-	uint16_t parameterUint16;
-	eCommandResult_T result;
-	result = ConsoleReceiveParamHexUint16(buffer, 1, &parameterUint16);
-	if ( COMMAND_SUCCESS == result )
-	{
-		ConsoleIoSendString("Parameter is 0x");
-		ConsoleSendParamHexUint16(parameterUint16);
 		ConsoleIoSendString(STR_ENDLINE);
 	}
 	return result;

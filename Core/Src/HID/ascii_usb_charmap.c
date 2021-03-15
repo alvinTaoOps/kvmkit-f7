@@ -50,10 +50,22 @@ const ASCII_USB_RELATION_t escape_string_hid_map[ESC_MAP_SIZE] = {
 							 .key1 = USB_HID_ESC }},
 		{ .ascii_rep = "os",
 		  .usage_code_rep = {.modifiers = USB_HID_MOD_NONE,
-							 .key1 = USB_HID_ENTER }},
+							 .key1 = USB_HID_LEFTOS }},
 		{ .ascii_rep = "tab",
 		  .usage_code_rep = {.modifiers = USB_HID_MOD_NONE,
 							 .key1 = USB_HID_TAB }},
+		{ .ascii_rep = "ctrl",
+		  .usage_code_rep = {.modifiers = USB_HID_MOD_LEFT_CTRL,
+							 .key1 = KEY_NONE }},
+		{ .ascii_rep = "alt",
+		  .usage_code_rep = {.modifiers = USB_HID_MOD_LEFT_ALT,
+							 .key1 = KEY_NONE }},
+		{ .ascii_rep = "gui",
+		  .usage_code_rep = {.modifiers = USB_HID_MOD_LEFT_GUI,
+							 .key1 = KEY_NONE }},
+		{ .ascii_rep = "shft",
+		  .usage_code_rep = {.modifiers = USB_HID_MOD_LEFT_SHIFT,
+							 .key1 = KEY_NONE }},
 };
 
 
@@ -69,16 +81,19 @@ uint8_t MapToHid(char * in_ascii, uint8_t len, USB_KEY_MSG_t * ret_hid)
 	uint8_t ret_val = 0;
 
 	assert(len > 0);
+	memset(ret_hid, 0, sizeof(USB_KEY_MSG_t));
 
-	if ( len == 1 ){ 			// regular ascii character
+	if ( len == 1 ){ 				// regular ascii character
 		ret_val = map_ascii_to_hid(*in_ascii, ret_hid);
 
-	} if ( len == 2 ){ 			// escaped ESC_CHAR
+	}
+	else if ( len == 2 ){ 			// escaped ESC_CHAR
 		assert(*(in_ascii)==ESC_CHAR && *(in_ascii+1)==ESC_CHAR);
 
 		ret_val = map_ascii_to_hid(ESC_CHAR, ret_hid);
 
-	} else { 					// full escape sequence
+	}
+	else { 							// full escape sequence
 		assert(len > 2); // '\' + one or more chars + '\'
 		assert(*(in_ascii)==ESC_CHAR && *(in_ascii+len-1)==ESC_CHAR);
 
@@ -180,11 +195,11 @@ void USB_KEY_MSG_Logical_Or(USB_KEY_MSG_t * hid_first_operand, USB_KEY_MSG_t * h
 	}
 	else if (operand_key_count[0] == 0 && operand_key_count[1] > 0) // only keys on operand 1
 	{
-		operand_arr[0] = operand_arr[1];
+		*operand_arr[0] = *operand_arr[1];
 	}
 	else if (operand_key_count[1] == 0 && operand_key_count[0] > 0) // only keys on operand 0
 	{
-		operand_arr[1] = operand_arr[0];
+		*operand_arr[1] = *operand_arr[0];
 	}
 	else // combine keys on operands 0 and 1
 	{
@@ -193,7 +208,7 @@ void USB_KEY_MSG_Logical_Or(USB_KEY_MSG_t * hid_first_operand, USB_KEY_MSG_t * h
 
 		for (uint8_t i = 0; i < 12; i++) // find unique keys
 		{
-			if (*key_array[i] != 0)
+			if (*key_array[i] != KEY_NONE)
 			{
 				uint8_t u;
 				for (u = 0; u < unique_count; u++)
