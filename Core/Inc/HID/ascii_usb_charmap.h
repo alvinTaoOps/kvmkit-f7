@@ -12,7 +12,7 @@
 #define INC_HID_ASCII_USB_CHARMAP_H_
 
 #define MAX_ASCII_REP_SIZE 5		// Allot characters to give options for escape strings
-#define ESC_MAP_SIZE 9
+#define ESC_MAP_SIZE 13
 #define ESC_CHAR '\\'
 #define ESC_COMBINE '+'
 #define ESC_MAP_ASCII '/'
