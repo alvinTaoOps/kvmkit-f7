@@ -51,10 +51,9 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
-void Error_Handler_Context(char * file, int line);
 
 /* USER CODE BEGIN EFP */
-
+void Error_Handler_Context(char * file, int line);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

@@ -44,17 +44,25 @@
 
 /* Private variables ---------------------------------------------------------*/
 
+TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
-volatile uint8_t flags = 0;
+volatile uint8_t flags = 0; // shared flag byte could cause race conditions
 #define FLAG_MASK_USB_DEMO 0x01
-	// 0x01 - usb demo flag
+	// 0x01 - USB demo button flag
+#define FLAG_MASK_LED_TOGGLE 0x02
+	// 0x02 - LED toggle timer flag
+#define FLAG_MASK_FLUSH_KEYS 0x04
+	// 0x04 - Flush key buffer timer flag
 	// 0x?? - undefined
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_TIM2_Init(void);
+static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 void ProcessUsbDemo(void);
 /* USER CODE END PFP */
@@ -93,13 +101,17 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USB_DEVICE_Init();
+  MX_TIM2_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   ConsoleInit();
+  // Start timer
+  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_Base_Start_IT(&htim4);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  uint32_t iter_cnt = 0;
   while (1)
   {
     /* USER CODE END WHILE */
@@ -108,10 +120,16 @@ int main(void)
 	  ConsoleProcess();
 	  ProcessUsbDemo();
 
-	  if (++iter_cnt > 500000) {  //Move to timer
+	  if (flags & FLAG_MASK_LED_TOGGLE)
+	  {
+		  HAL_GPIO_TogglePin(GPIOB, LD2_Pin);
+		  flags &= ~FLAG_MASK_LED_TOGGLE;
+	  }
+
+	  if (flags & FLAG_MASK_FLUSH_KEYS)
+	  {
 		  (void) FlushKeyQueue();
-		  HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
-		  iter_cnt = 0;
+		  flags &= ~FLAG_MASK_FLUSH_KEYS;
 	  }
   }
   /* USER CODE END 3 */
@@ -175,6 +193,96 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 960-1;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 5000-1;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief TIM4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM4_Init(void)
+{
+
+  /* USER CODE BEGIN TIM4_Init 0 */
+
+  /* USER CODE END TIM4_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM4_Init 1 */
+
+  /* USER CODE END TIM4_Init 1 */
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 1465-1;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 65535;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM4_Init 2 */
+
+  /* USER CODE END TIM4_Init 2 */
+
 }
 
 /**
@@ -296,6 +404,22 @@ void ProcessUsbDemo()
 	{
 		USB_Keyboard_SendString((char *) demo_text);
 		flags &= ~FLAG_MASK_USB_DEMO;
+	}
+}
+
+/**
+ * Handle timer period interrupt callbacks
+ * Overrides stm32f7xx_hal_tim.c:HAL_TIM_PeriodElapsedCallback
+ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if (&htim2 == htim)
+	{
+		flags |= FLAG_MASK_FLUSH_KEYS;
+	}
+	else if (&htim4 == htim)
+	{
+		flags |= FLAG_MASK_LED_TOGGLE;
 	}
 }
 
