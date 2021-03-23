@@ -23,7 +23,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "string.h"
 #include <Console/console.h>
 #include <HID/keystroke.h>
 /* USER CODE END Includes */
@@ -402,6 +401,7 @@ void ProcessUsbDemo()
 {
 	if ( flags & FLAG_MASK_USB_DEMO )
 	{
+
 		USB_Keyboard_SendString((char *) demo_text);
 		flags &= ~FLAG_MASK_USB_DEMO;
 	}
@@ -421,16 +421,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	{
 		flags |= FLAG_MASK_LED_TOGGLE;
 	}
-}
-
-/**
-  * @brief  This function is executed in case of error occurrence and includes file and line context
-  */
-void Error_Handler_Context(char * file, int line)
-{
-	char err_msg[50];
-	printf(err_msg, "Fatal error at %s, %d\n", file, line);
-	Error_Handler();
 }
 /* USER CODE END 4 */
 

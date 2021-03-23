@@ -252,6 +252,8 @@ __weak void UART4_IRQHandler(void)
   /* USER CODE BEGIN UART4_IRQn 0 */
 	// CUBE NOTE: this function must be made weak or removed so we can redefine in consoleIo
 	// To use transmit on interrupt, might want to call the rx handler here and fall through
+	// TODO: It would be great to change the fxn pointer in the nvic startup script in some
+	// permanent way
   /* USER CODE END UART4_IRQn 0 */
   HAL_UART_IRQHandler(&huart4);
   /* USER CODE BEGIN UART4_IRQn 1 */

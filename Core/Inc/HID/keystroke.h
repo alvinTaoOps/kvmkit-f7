@@ -13,11 +13,14 @@
 
 #define KEY_BUF_SIZE 100
 
+#define HID_KEYBOARD_REPORT_ID 0x01 		// This must match the report descriptor
+
 /*
  * This struct is used as a uint8[], so it can't be __packed__
  * modifiers could be changed to bit fields if the command console arguments change
  */
 typedef struct USB_KEY_MSG_Struct {
+	uint8_t REPORT_ID;
 	uint8_t modifiers;
 	uint8_t RESERVED;
 	uint8_t key1;
@@ -27,7 +30,7 @@ typedef struct USB_KEY_MSG_Struct {
 	uint8_t key5;
 	uint8_t key6;
 }USB_KEY_MSG_t;
-static_assert(sizeof(USB_KEY_MSG_t) <= 8, "Too large for HID profile");
+static_assert(sizeof(USB_KEY_MSG_t) <= 9, "Too large for HID profile");
 
 void InsertCharacters(char * input, uint8_t n_char);
 void InsertHidKey(uint8_t modifiers, uint8_t * keys, uint8_t n_keys);

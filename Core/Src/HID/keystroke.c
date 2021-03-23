@@ -6,14 +6,16 @@
  */
 #include <HID/keystroke.h>
 #include <HID/ascii_usb_charmap.h>
-#include "usbd_customhid.h"
+#include <HID/usb_hid.h>
+#include <error_and_debug.h>
+
+#include "string.h"
+#include "stdio.h"
 
 #define DEFAULT_HOLD 0
 #define DEFAULT_RELEASE 1
 //#define DEFAULT_ON_NO_COMMAND DEFAULT_HOLD
 #define DEFAULT_ON_NO_COMMAND DEFAULT_RELEASE
-
-extern USBD_HandleTypeDef hUsbDeviceFS;
 
 const static USB_KEY_MSG_t NO_KEY_PRESS =
 		{.modifiers=0, .key1=0, .key2=0, .key3=0, .key4=0, .key5=0, .key6=0};
@@ -26,7 +28,7 @@ uint8_t overwrite_counter = 0;
 // local methods
 void iter_w_wrap(uint8_t * kb_select){ *kb_select = (*kb_select + 1) % KEY_BUF_SIZE; } // TODO: make this be a define method?
 USB_KEY_MSG_t charToHidMessage(char * input, uint8_t n_char);
-HAL_StatusTypeDef USB_Keyboard_SendKeys(USB_KEY_MSG_t keys);
+HID_StatusTypeDef USB_Keyboard_SendKeys(USB_KEY_MSG_t keys);
 
 /**
  * Push an hid keyboard message onto the buffer, handling insertion/removal pointers and
@@ -169,18 +171,16 @@ uint8_t SendKey()
 		iter_w_wrap(&kb_pop);
 	}
 
-	if(USB_Keyboard_SendKeys(ret) != HAL_OK)
+	if(USB_Keyboard_SendKeys(ret) != HID_OK)
 	{
 		Error_Handler_Context(__FILE__, __LINE__);
 	}
-	HAL_Delay(15);
 
 #if DEFAULT_ON_NO_COMMAND == DEFAULT_RELEASE
-	if(USB_Keyboard_SendKeys(NO_KEY_PRESS) != HAL_OK)
+	if(USB_Keyboard_SendKeys(NO_KEY_PRESS) != HID_OK)
 	{
 		Error_Handler_Context(__FILE__, __LINE__);
 	}
-	HAL_Delay(15);
 #endif
 
 	return !empty_buf;
@@ -197,15 +197,16 @@ void FlushKeyQueue()
 
 /**
  * 	Immediately send a combination of keys and modifiers
- * 	TODO: register a timer to call this function and send the next keypress in the queue (if any) every 15ms, else use hold behavior
  */
-HAL_StatusTypeDef USB_Keyboard_SendKeys(USB_KEY_MSG_t keys)
+HID_StatusTypeDef USB_Keyboard_SendKeys(USB_KEY_MSG_t keys)
 {
-	// Is this a critical section? The interrupt might be going here and getting the key stuck?
-	// TODO try masking the button interrupt here!
-	HAL_StatusTypeDef ret = USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, &keys.modifiers, 8);
+	keys.REPORT_ID = HID_KEYBOARD_REPORT_ID;
+	HID_StatusTypeDef ret = USB_HID_SendReport((uint8_t *) &keys, sizeof(USB_KEY_MSG_t));
 
-	HAL_Delay(15);
+	// We can't return until we know the pointer to our message struct is done being used
+	while (USB_HID_IsBusy()) {
+		asm("NOP");
+	}
 
 	return ret;
 }
@@ -221,16 +222,15 @@ void USB_Keyboard_SendString(char * s)
 	while (*(s+i)) //until ascii null char
 	{
 		MapToHid(s+i, 1, &keypress);
-		if(USB_Keyboard_SendKeys(keypress) != HAL_OK)
+		if(USB_Keyboard_SendKeys(keypress) != HID_OK)
 		{
 			Error_Handler_Context(__FILE__, __LINE__);
 		}
-		HAL_Delay(15);
-		if(USB_Keyboard_SendKeys(NO_KEY_PRESS) != HAL_OK)
+
+		if(USB_Keyboard_SendKeys(NO_KEY_PRESS) != HID_OK)
 		{
 			Error_Handler_Context(__FILE__, __LINE__);
 		}
-		HAL_Delay(15);
 		i++;
 	}
 }
