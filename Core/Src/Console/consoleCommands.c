@@ -6,7 +6,6 @@
 //		    {"ver", &ConsoleCommandVer, HELP("Get the version string")},
 //		3. Implement the function, using ConsoleReceiveParam<Type> to get the parameters from the buffer.
 
-#include <Console/console.h>
 #include <Console/consoleCommands.h>
 #include <Console/consoleIo.h>
 #include <HID/keystroke.h>
@@ -92,7 +91,7 @@ static eCommandResult_T ConsoleCommandSetMouse(const char buffer[])
 	result |= ConsoleReceiveParamInt16(buffer, 4, &mouseWheel);
 	if ( COMMAND_SUCCESS == result )
 	{
-		SetMouseState((uint8_t) buttonState, mouseX, mouseY, mouseWheel);
+		MouseSetState((uint8_t) buttonState, mouseX, mouseY, mouseWheel);
 		ConsoleIoSendString(STR_ENDLINE);
 	}
 	return result;

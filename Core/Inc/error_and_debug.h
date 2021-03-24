@@ -8,8 +8,6 @@
 #ifndef INC_ERROR_AND_DEBUG_H_
 #define INC_ERROR_AND_DEBUG_H_
 
-#include <main.h>
-
 void Error_Handler_Context(char * file, int line);
 void Error_Handler_Context_Description(char * file, int line, char * description);
 

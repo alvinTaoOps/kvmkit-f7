@@ -12,8 +12,8 @@
 
 #define HID_MOUSE_REPORT_ID 0x02 		// This must match the report descriptor
 
-typedef int16_t HID_MOUSE_POS_t;
-typedef uint8_t HID_WHEEL_t;
+#define HID_MOUSE_POS_t int8_t
+#define HID_WHEEL_t int8_t
 
 typedef struct USB_MOUSE_MSG_Struct {
 	uint8_t REPORT_ID;
@@ -22,13 +22,15 @@ typedef struct USB_MOUSE_MSG_Struct {
 	HID_MOUSE_POS_t pos_x;
 	HID_MOUSE_POS_t pos_y;
 	HID_WHEEL_t wheel;
+	// uint8_t RESERVED; // Needed if sizeof(USB_MOUSE_MSG_t) < 5 for the STM32 HAL (if wheel is disabled)
 }USB_MOUSE_MSG_t;
 
 
-void SetMouseState(uint8_t buttons, HID_MOUSE_POS_t pos_x, HID_MOUSE_POS_t pos_y, HID_WHEEL_t wheel);
+void MouseSetState(uint8_t buttons, HID_MOUSE_POS_t pos_x, HID_MOUSE_POS_t pos_y, HID_WHEEL_t wheel);
 
-
-USB_MOUSE_MSG_t GetMouseState();
+USB_MOUSE_MSG_t MouseGetState();
+void MouseSendState();
+void MouseSendFreshState();
 
 
 #endif /* INC_HID_MOUSE_H_ */

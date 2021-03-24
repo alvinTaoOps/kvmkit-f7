@@ -10,35 +10,43 @@
 
 
 USB_MOUSE_MSG_t mouseState;
-
+uint8_t freshMouseState = 0;
 
 HID_StatusTypeDef USB_Mouse_SendKeys(USB_MOUSE_MSG_t * mouse_out);
 
 /*
  * sets mouse position
  * TODO how do we handle double click if the button fields might not be read on all three click-release-click?
- * 		maybe needs to flag on "read from usb"?
+ * 		maybe needs wait on freshness flag to clear?
  */
-void SetMouseState(uint8_t buttons, HID_MOUSE_POS_t pos_x, HID_MOUSE_POS_t pos_y, HID_WHEEL_t wheel)
+void MouseSetState(uint8_t buttons, HID_MOUSE_POS_t pos_x, HID_MOUSE_POS_t pos_y, HID_WHEEL_t wheel)
 {
-	mouseState.buttons = buttons & 0b00011111; // 5 button flags are 5 LSb
+	mouseState.buttons = buttons & 0b00000111; // 3 button flags are 3 LSb
 	mouseState.pos_x = pos_x;
 	mouseState.pos_y = pos_y;
 	mouseState.wheel = wheel;
+
+	freshMouseState = 1;
 }
 
 
-/*
- * TODO absolute x, y, and buttons should be sticky (not cleared once sent), not sure about clearing mouse wheel, relative x,y
- */
 USB_MOUSE_MSG_t GetMouseState()
 {
 	return mouseState;
 }
 
-void SendMouseState()
+void MouseSendState()
 {
 	USB_Mouse_SendKeys(&mouseState);
+	freshMouseState = 0;
+}
+
+void MouseSendFreshState()
+{
+	if (freshMouseState > 0)
+	{
+		MouseSendState();
+	}
 }
 
 
@@ -49,6 +57,6 @@ void SendMouseState()
 HID_StatusTypeDef USB_Mouse_SendKeys(USB_MOUSE_MSG_t * mouse_out)
 {
 	mouse_out->REPORT_ID = HID_MOUSE_REPORT_ID;
-	HID_StatusTypeDef ret = USB_HID_SendReport((uint8_t *) &mouse_out, sizeof(USB_MOUSE_MSG_t));
+	HID_StatusTypeDef ret = USB_HID_SendReport((uint8_t *) mouse_out, sizeof(USB_MOUSE_MSG_t));
 	return ret;
 }

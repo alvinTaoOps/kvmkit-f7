@@ -4,6 +4,7 @@
  *  Created on: Mar 23, 2021
  *      Author: Bowen Shaner
  */
+#include <main.h>
 #include <error_and_debug.h>
 #include "stdio.h"
 

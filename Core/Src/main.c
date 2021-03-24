@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include <Console/console.h>
 #include <HID/keystroke.h>
+#include <HID/mouse.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -34,6 +35,15 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define FLAG_MASK_USB_DEMO 0x01
+	// 0x01 - USB demo button flag
+#define FLAG_MASK_LED_TOGGLE 0x02
+	// 0x02 - LED toggle timer flag
+#define FLAG_MASK_FLUSH_KEYS 0x04
+	// 0x04 - Flush key buffer timer flag
+#define FLAG_MASK_SEND_MOUSE 0x08
+	// 0x08 - Send mouse state (if fresh) flag
+	// 0x?? - undefined
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,13 +58,6 @@ TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
 volatile uint8_t flags = 0; // shared flag byte could cause race conditions
-#define FLAG_MASK_USB_DEMO 0x01
-	// 0x01 - USB demo button flag
-#define FLAG_MASK_LED_TOGGLE 0x02
-	// 0x02 - LED toggle timer flag
-#define FLAG_MASK_FLUSH_KEYS 0x04
-	// 0x04 - Flush key buffer timer flag
-	// 0x?? - undefined
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -129,6 +132,12 @@ int main(void)
 	  {
 		  (void) FlushKeyQueue();
 		  flags &= ~FLAG_MASK_FLUSH_KEYS;
+	  }
+
+	  if (flags & FLAG_MASK_SEND_MOUSE)
+	  {
+		  (void) MouseSendFreshState();
+		  flags &= ~FLAG_MASK_SEND_MOUSE;
 	  }
   }
   /* USER CODE END 3 */
@@ -415,7 +424,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (&htim2 == htim)
 	{
-		flags |= FLAG_MASK_FLUSH_KEYS;
+		flags |= (FLAG_MASK_FLUSH_KEYS | FLAG_MASK_SEND_MOUSE);
 	}
 	else if (&htim4 == htim)
 	{

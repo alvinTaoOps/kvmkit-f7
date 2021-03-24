@@ -26,9 +26,8 @@ uint8_t kb_pop = 1;
 uint8_t overwrite_counter = 0;
 
 // local methods
-void iter_w_wrap(uint8_t * kb_select){ *kb_select = (*kb_select + 1) % KEY_BUF_SIZE; } // TODO: make this be a define method?
-USB_KEY_MSG_t charToHidMessage(char * input, uint8_t n_char);
-HID_StatusTypeDef USB_Keyboard_SendKeys(USB_KEY_MSG_t keys);
+static void iter_w_wrap(uint8_t * kb_select) { *kb_select = (*kb_select + 1) % KEY_BUF_SIZE; } // TODO: make this be a define method?
+static HID_StatusTypeDef USB_Keyboard_SendKeys(USB_KEY_MSG_t keys);
 
 /**
  * Push an hid keyboard message onto the buffer, handling insertion/removal pointers and
@@ -198,7 +197,7 @@ void FlushKeyQueue()
 /**
  * 	Immediately send a combination of keys and modifiers
  */
-HID_StatusTypeDef USB_Keyboard_SendKeys(USB_KEY_MSG_t keys)
+static HID_StatusTypeDef USB_Keyboard_SendKeys(USB_KEY_MSG_t keys)
 {
 	keys.REPORT_ID = HID_KEYBOARD_REPORT_ID;
 	HID_StatusTypeDef ret = USB_HID_SendReport((uint8_t *) &keys, sizeof(USB_KEY_MSG_t));
